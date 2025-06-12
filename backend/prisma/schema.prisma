@@ -78,7 +78,7 @@ model RolePermissions {
 
 model Statistics {
   id Int @id @default(autoincrement())
-  statistic_name String
+  statistic_name String @unique
   statistic_amount Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
