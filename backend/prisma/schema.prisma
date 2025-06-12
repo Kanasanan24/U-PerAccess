@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id Int @id @default(autoincrement())
+  firstname String
+  lastname String
+  email String @unique
+  password String
+  emailVerifiedAt DateTime?
+  status Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // role relation
+  userRoles  UserRoles[]
+  // user assign role
+  roleAssignedBy UserRoles[] @relation("roleAssignedBy")
+  // user assign permission
+  permissionAssignedBy RolePermissions[] @relation("permissionAssignedBy")
+}
+
+model UserRoles {
+  id Int @id @default(autoincrement())
+  user_id Int
+  role_id Int
+  assignedBy Int
+  createdAt DateTime @default(now())
+  // relation
+  user Users @relation(fields: [user_id], references: [id])
+  role Roles @relation(fields: [role_id], references: [id])
+  // user assign role
+  roleAssignedBy Users @relation("roleAssignedBy", fields: [assignedBy], references: [id])
+  @@unique([user_id, role_id])
+}
+
+model Roles {
+  id Int @id @default(autoincrement())
+  role_name String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // user relation
+  userRoles  UserRoles[]
+  // permission relation
+  rolePermissions RolePermissions[]
+}
+
+model Permissions {
+  id Int @id @default(autoincrement())
+  permission_name String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // role relation
+  rolePermissions RolePermissions[]
+}
+
+model RolePermissions {
+  id Int @id @default(autoincrement())
+  role_id Int
+  permission_id Int
+  assignedBy Int
+  createdAt DateTime @default(now())
+  // relation
+  role Roles @relation(fields: [role_id], references: [id])
+  permission Permissions @relation(fields: [permission_id], references: [id])
+  // user assign permission
+  permissionAssignedBy Users @relation("permissionAssignedBy", fields: [assignedBy], references: [id])
+  @@unique([role_id, permission_id])
+}
+
+model Statistics {
+  id Int @id @default(autoincrement())
+  statistic_name String
+  statistic_amount Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
