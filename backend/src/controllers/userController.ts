@@ -55,6 +55,15 @@ const createUser = async(req:Request, res:Response) => {
     }
 }
 
+const getUsers = async(req:Request, res:Response) => {
+    try {
+        //
+    } catch (error) {
+        console.error({ position: "Get users", error });
+        return res.status(500).json({ message: "Something went wrong." });
+    }
+}
+
 export {
     createUser
 }
