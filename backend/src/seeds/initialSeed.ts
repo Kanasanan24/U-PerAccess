@@ -24,8 +24,8 @@ const initial = async() => {
                 select: { id: true }
             });
             // initial data
-            const role_names = ["user", "admin", "manager"];
-            const permission_names = ["create_user", "find_user", "update_user", "delete_user"];
+            const role_names = ["user", "admin"];
+            const permission_names = ["create_user", "find_user", "update_user", "delete_user", "find_role", "find_permission"];
             const statistic_names = ["amount_user", "amount_role", "amount_permission"];
             const roleExist = await prisma.roles.findMany({ where: { role_name: { in: role_names } }, select: { role_name: true } });
             const permissionExist = await prisma.permissions.findMany({ where: { permission_name: { in: permission_names } }, select: { permission_name: true } });

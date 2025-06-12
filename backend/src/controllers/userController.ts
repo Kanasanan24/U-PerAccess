@@ -291,5 +291,6 @@ export {
     getUsers,
     getUserById,
     updateUser,
-    deleteUser
+    deleteUser,
+    userSyncRoles
 }

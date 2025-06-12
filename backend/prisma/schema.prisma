@@ -83,3 +83,15 @@ model Statistics {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Tokens {
+  id Int @id @default(autoincrement())
+  token Int
+  token_type String
+  for_email String
+  reference_code String
+  isActive Boolean
+  expiredAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
