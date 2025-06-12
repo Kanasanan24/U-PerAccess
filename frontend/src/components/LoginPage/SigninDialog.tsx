@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2Icon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from "@/components/ui/button";
@@ -57,9 +58,8 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input type="email" placeholder="Enter you email..." {...field} />
+                                <Input type="email" placeholder="Enter your email..." {...field} />
                             </FormControl>
-                            {/* <FormDescription>This is your email obtained from sign up.</FormDescription> */}
                             <FormMessage />
                         </FormItem>
                     )}
@@ -71,13 +71,13 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
                         <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                                <Input type="password" placeholder="Enter you password..." {...field} />
+                                <Input type="password" placeholder="Enter your password..." {...field} />
                             </FormControl>
-                            {/* <FormDescription>This is your password of email.</FormDescription> */}
                             <FormMessage />
                         </FormItem>
                     )}
                 />
+                <Link to="#" className="text-sm underline hover:text-orange-600 transition duration-150 ease-in">Forgot password?</Link>
                 <DialogFooter>
                 <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>

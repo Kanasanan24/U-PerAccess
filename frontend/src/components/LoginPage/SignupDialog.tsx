@@ -26,30 +26,68 @@ import { Button } from "@/components/ui/button";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type FieldErrors, type UseFormReturn } from 'react-hook-form';
 
-interface IFSigninForm {
+interface IFSignupForm {
     isLoad: boolean,
     form: UseFormReturn<signinType>,
-    submitSignin: (values: signinType) => void,
+    submitSignup: (values: signinType) => void,
     onInvalid: (errors: FieldErrors<signinType>) => void,
 }
 
 const signinBlueprint = z.object({
+    firstname: z.string()
+                .min(3, { message: "firstname must be at least 3 characters long." })
+                .max(100, { message: "firstname must be less than 100 characters." }),
+    lastname: z.string()
+                .min(3, { message: "lastname must be at least 3 characters long." })
+                .max(100, { message: "lastname must be less than 100 characters." }),
     email: z.string()
             .email({ message: "Please, enter a valid email." })
-            .max(150, { message: "The email must be less than 150 characters."}),
+            .max(200, { message: "The email must be less than 200 characters."}),
     password: z.string()
                 .min(8, { message: "password must be at least 8 characters long." })
                 .max(100, { message: "password must be less than 100 characters." })
                 .regex(/[a-z]/, { message: "password must contain at least one lowercase letter." })
                 .regex(/[A-Z]/, { message: "password must contain at least one uppercase letter." })
-                .regex(/[^a-zA-Z0-9]/, { message: "password must contain a special character." })
-});
+                .regex(/[^a-zA-Z0-9]/, { message: "password must contain a special character." }),
+    confirm_password: z.string()
+}).refine((data) => data.password === data.confirm_password, {
+    message: "password does not match.",
+    path: ["confirm_password"]
+})
 type signinType = z.infer<typeof signinBlueprint>;
 
-const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
+const SignupForm = ({ form, isLoad, onInvalid, submitSignup }:IFSignupForm) => {
     return (
         <Form {...form}>
-            <form className="grid gap-4" onSubmit={form.handleSubmit(submitSignin, onInvalid)}>
+            <form className="grid gap-4" onSubmit={form.handleSubmit(submitSignup, onInvalid)}>
+                <div className="flex gap-5">
+                    <FormField
+                        control={form.control}
+                        name="firstname"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Firstname</FormLabel>
+                                <FormControl>
+                                    <Input type="text" placeholder="Enter your firstname..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="lastname"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Lastname</FormLabel>
+                                <FormControl>
+                                    <Input type="text" placeholder="Enter your lastname..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
                 <FormField
                     control={form.control}
                     name="email"
@@ -57,9 +95,8 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input type="email" placeholder="Enter you email..." {...field} />
+                                <Input type="email" placeholder="Enter your email..." {...field} />
                             </FormControl>
-                            {/* <FormDescription>This is your email obtained from sign up.</FormDescription> */}
                             <FormMessage />
                         </FormItem>
                     )}
@@ -71,20 +108,32 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
                         <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                                <Input type="password" placeholder="Enter you password..." {...field} />
+                                <Input type="password" placeholder="Enter your password..." {...field} />
                             </FormControl>
-                            {/* <FormDescription>This is your password of email.</FormDescription> */}
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="confirm_password"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="Enter your confirm password..." {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
                 <DialogFooter>
-                <DialogClose asChild>
+                    <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button type="submit">
                         {isLoad && (<Loader2Icon className="animate-spin" />)}
-                        Submit
+                        Verify Email
                     </Button>
                 </DialogFooter>
             </form>
@@ -105,7 +154,7 @@ const SignupDialog = () => {
 
     const onInvalid = (_errors: FieldErrors<signinType>) => setTimeout(() => form.reset(), 5000);
 
-    const submitSignin = (values: z.infer<typeof signinBlueprint>) => { // success case when validate
+    const submitSignup = (values: z.infer<typeof signinBlueprint>) => { // success case when validate
         setIsLoad(true);
         try {
             console.log(values);
@@ -126,7 +175,7 @@ const SignupDialog = () => {
                         To try out the user management system, including access control and role-based permissions for managing your own data within the system.
                     </DialogDescription>
                 </DialogHeader>
-                <SigninForm isLoad={isLoad} form={form} onInvalid={onInvalid} submitSignin={submitSignin} />
+                <SignupForm isLoad={isLoad} form={form} onInvalid={onInvalid} submitSignup={submitSignup} />
             </DialogContent>
         </Dialog>
     );
