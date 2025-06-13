@@ -1,8 +1,12 @@
+import DashboardLayout from "../_layout/DashboardLayout";
+
 const MainDashboardPage = () => {
     return (
-        <div id="main-dashboard-page">
-            Hello, World.
-        </div>
+        <DashboardLayout title="Dashboard">
+            <div id="main-dashboard-page">
+                
+            </div>
+        </DashboardLayout>
     )
 };
 
