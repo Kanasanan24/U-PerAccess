@@ -95,7 +95,7 @@ const createUser = async(req:Request<{}, {}, IFCreateUser>, res:Response) => {
     }
 }
 
-const getUsers = async(req:Request<{}, {}, {}, IFSearchType>, res:Response) => {
+const getUsers = async(req:Request, res:Response) => {
     try {
         // validate request
         const { error } = searchUserBlueprint.validate(req.query, { abortEarly: false });
@@ -105,7 +105,8 @@ const getUsers = async(req:Request<{}, {}, {}, IFSearchType>, res:Response) => {
             )});
         }
         // query users
-        const { title = "", page = 1, pageSize = 15, sortField = "id", sortOrder = "asc" } = req.query;
+        const query = req.query as unknown as IFSearchType;
+        const { title = "", page = 1, pageSize = 15, sortField = "id", sortOrder = "asc" } = query;
         const parsePage = Number(page);
         const parsePageSize = Number(pageSize);
         const users = await prisma.users.findMany({
