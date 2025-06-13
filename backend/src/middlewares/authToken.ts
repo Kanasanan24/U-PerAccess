@@ -20,6 +20,7 @@ const verifyAuth = async(req:Request, res:Response, next:NextFunction) => {
             where: { id: Number(decoded.id) },
             select: {
                 id: true,
+                email: true,
                 userRoles: {
                     select: {
                         role: {
@@ -44,7 +45,8 @@ const verifyAuth = async(req:Request, res:Response, next:NextFunction) => {
         // create verify data
         req.verify_user = {
             user_id: decoded.id,
-            permissions: permissions ?? []
+            permissions: permissions ?? [],
+            email: user.email
         }
         next();
     } catch (error) {

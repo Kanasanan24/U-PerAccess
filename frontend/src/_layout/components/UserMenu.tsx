@@ -1,9 +1,9 @@
-import {
+// component
+import { 
     BadgeCheck,
     LogOut,
     ChevronsUpDown
 } from "lucide-react";
-
 import {
     Avatar,
     AvatarFallback,
@@ -23,11 +23,32 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
+// other lib
+import axios from "axios";
 import Space from "/Profile.jpg";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { toastOptions } from "../../components/LoginPage/SignupDialog";
 
 const UserMenu = () => {
-
+    // router
+    const navigate = useNavigate();
+    // function
+    const logout = async() => {
+        try {
+            const response = await axios.post(`${import.meta.env.VITE_API}/signout`, {}, {withCredentials:true});
+            if (response?.data?.message) {
+                toast.success(response.data.message, toastOptions);
+                navigate("/");
+            }
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                if (error?.response?.data?.message) toast.error(error.response.data.message, toastOptions);
+                else toast.error("Something went wrong.", toastOptions);
+            } else toast.error("Something went wrong.", toastOptions);
+        }
+    };
+    // render
     return (
         <SidebarMenu>
             <SidebarMenuItem>
@@ -75,7 +96,7 @@ const UserMenu = () => {
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={async() => await logout()}>
                         <LogOut />
                         Log out
                     </DropdownMenuItem>

@@ -135,6 +135,20 @@ const signup = async(req:Request<{}, {}, IFSignup>, res:Response) => {
     }
 }
 
+const signout = (_req:Request, res:Response) => {
+    try {
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.COOKIE_SECURE_MODE === "production",
+            sameSite: "none",
+        });
+        return res.status(200).json({ message: "Sign out successfully." });
+    } catch (error) {
+        console.error({ position: "Sign out", error });
+        return res.status(500).json({ message: "Something went wrong." });
+    }
+}
+
 const sendToken = async(req:Request, res:Response) => {
     try {
         // check request
@@ -182,5 +196,6 @@ const getFutureTime = (minutes = 15) => {
 export {
     signin,
     signup,
+    signout,
     sendToken
 }
