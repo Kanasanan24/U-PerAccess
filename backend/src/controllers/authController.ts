@@ -166,7 +166,7 @@ const sendToken = async(req:Request, res:Response) => {
             subject: "U-PerAccess : OTP Verification Code",
             html
         });
-        return res.status(200).json({ message: "The otp was sent successfully." });
+        return res.status(200).json({ message: "The OTP was sent successfully.", ref: token.reference_code });
     } catch (error) {
         console.error({ position: "Send token", error });
         return res.status(500).json({ message: "Something went wrong." });

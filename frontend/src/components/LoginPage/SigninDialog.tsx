@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import axios from "axios";
 import {
     Form,
     FormControl,
@@ -20,37 +21,37 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { Loader2Icon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { toastOptions } from './SignupDialog';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, type FieldErrors, type UseFormReturn } from 'react-hook-form';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 
 interface IFSigninForm {
     isLoad: boolean,
     form: UseFormReturn<signinType>,
     submitSignin: (values: signinType) => void,
-    onInvalid: (errors: FieldErrors<signinType>) => void,
+    setIsOpen: React.Dispatch<React.SetStateAction<boolean>>,
 }
 
 const signinBlueprint = z.object({
     email: z.string()
             .email({ message: "Please, enter a valid email." })
-            .max(150, { message: "The email must be less than 150 characters."}),
+            .max(200, { message: "The email must be less than 200 characters."}),
     password: z.string()
                 .min(8, { message: "password must be at least 8 characters long." })
                 .max(100, { message: "password must be less than 100 characters." })
-                .regex(/[a-z]/, { message: "password must contain at least one lowercase letter." })
-                .regex(/[A-Z]/, { message: "password must contain at least one uppercase letter." })
-                .regex(/[^a-zA-Z0-9]/, { message: "password must contain a special character." })
 });
 type signinType = z.infer<typeof signinBlueprint>;
 
-const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
+const SigninForm = ({ form, isLoad, setIsOpen, submitSignin }:IFSigninForm) => {
     return (
         <Form {...form}>
-            <form className="grid gap-4" onSubmit={form.handleSubmit(submitSignin, onInvalid)}>
+            <form className="grid gap-4" onSubmit={form.handleSubmit(submitSignin)}>
                 <FormField
                     control={form.control}
                     name="email"
@@ -79,8 +80,8 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
                 />
                 <Link to="#" className="text-sm underline hover:text-orange-600 transition duration-150 ease-in">Forgot password?</Link>
                 <DialogFooter>
-                <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                    <DialogClose asChild>
+                        <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
                     </DialogClose>
                     <Button type="submit">
                         {isLoad && (<Loader2Icon className="animate-spin" />)}
@@ -93,8 +94,12 @@ const SigninForm = ({ form, isLoad, onInvalid, submitSignin }:IFSigninForm) => {
 }
 
 const SigninDialog = () => {
+    // navigate
+    const navigate = useNavigate();
+    // state
     const [isLoad, setIsLoad] = useState<boolean>(false);
-
+    const [isOpen, setIsOpen] = useState<boolean>(false);
+    // zod validate
     const form = useForm<z.infer<typeof signinBlueprint>>({ // change validate to type
         resolver: zodResolver(signinBlueprint), // sync zod and react-hook-form
         defaultValues: { // initial variable
@@ -102,22 +107,40 @@ const SigninDialog = () => {
             password: ""
         }
     });
-
-    const onInvalid = (_errors: FieldErrors<signinType>) => setTimeout(() => form.reset(), 5000);
-
-    const submitSignin = (values: z.infer<typeof signinBlueprint>) => { // success case when validate
+    // function
+    const submitSignin = async(values: z.infer<typeof signinBlueprint>) => { // success case when validate
         setIsLoad(true);
         try {
-            console.log(values);
+            const response = await toast.promise(
+                axios.post(`${import.meta.env.VITE_API}/signin`, {
+                    email: values.email, password: values.password
+                }, {
+                    withCredentials: true
+                }),
+                {
+                    pending: "Promise is pending...",
+                    success: "Promise resolved",
+                    error: "Promise rejected",
+                }
+            );
+            if  (response?.data?.message) {
+                toast.success(response.data.message, toastOptions);
+                navigate("/dashboard");
+            }
         } catch (error) {
-            console.error(error);
+            if (axios.isAxiosError(error)) {
+                if (error?.response?.data?.message) toast.error(error.response.data.message, toastOptions);
+                else toast.error("Something went wrong.", toastOptions);
+            } else toast.error("Something went wrong.", toastOptions);
+        } finally {
+            setIsLoad(false);
         }
     }
 
     return (
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button className={cn('py-3 px-8')}>Sign in</Button>
+                <Button className={cn('py-3 px-8')} onClick={() => setIsOpen(true)}>Sign in</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -126,7 +149,7 @@ const SigninDialog = () => {
                         To access the user and permission management panel, along with other features.
                     </DialogDescription>
                 </DialogHeader>
-                <SigninForm isLoad={isLoad} form={form} onInvalid={onInvalid} submitSignin={submitSignin} />
+                <SigninForm isLoad={isLoad} form={form} setIsOpen={setIsOpen} submitSignin={submitSignin} />
             </DialogContent>
         </Dialog>
     );

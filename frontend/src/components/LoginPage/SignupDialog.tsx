@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import axios from "axios";
 import {
     Form,
     FormControl,
@@ -18,19 +19,50 @@ import {
     DialogTitle,
     DialogTrigger
 } from '@/components/ui/dialog';
+import {
+    InputOTP,
+    InputOTPGroup,
+    InputOTPSeparator,
+    InputOTPSlot
+} from "@/components/ui/input-otp";
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { Loader2Icon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from "@/components/ui/button";
+import { useState, useRef, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, type FieldErrors, type UseFormReturn } from 'react-hook-form';
+import { toast, Bounce, type ToastOptions } from "react-toastify";
+import { useForm, type UseFormReturn } from 'react-hook-form';
 
 interface IFSignupForm {
     isLoad: boolean,
     form: UseFormReturn<signinType>,
-    submitSignup: (values: signinType) => void,
-    onInvalid: (errors: FieldErrors<signinType>) => void,
+    prepareSignup: (values: signinType) => void,
+}
+
+interface IFTokenForm {
+    token: number,
+    isLoad: boolean,
+    refCode: string,
+    countdown: number,
+    isAvailableSend: boolean,
+    sendOTP: () => Promise<void>,
+    submitSignup: () => Promise<void>,
+    setToken: React.Dispatch<React.SetStateAction<number>>,
+    setCurrentPage: React.Dispatch<React.SetStateAction<1 | 2>>
+}
+
+export const toastOptions:ToastOptions<unknown> = {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: false,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme: "light",
+    transition: Bounce,
 }
 
 const signinBlueprint = z.object({
@@ -56,10 +88,10 @@ const signinBlueprint = z.object({
 })
 type signinType = z.infer<typeof signinBlueprint>;
 
-const SignupForm = ({ form, isLoad, onInvalid, submitSignup }:IFSignupForm) => {
+const SignupForm = ({ form, isLoad, prepareSignup }:IFSignupForm) => {
     return (
         <Form {...form}>
-            <form className="grid gap-4" onSubmit={form.handleSubmit(submitSignup, onInvalid)}>
+            <form className="grid gap-4" onSubmit={form.handleSubmit(prepareSignup)}>
                 <div className="flex gap-5">
                     <FormField
                         control={form.control}
@@ -141,9 +173,57 @@ const SignupForm = ({ form, isLoad, onInvalid, submitSignup }:IFSignupForm) => {
     );
 }
 
-const SignupDialog = () => {
-    const [isLoad, setIsLoad] = useState<boolean>(false);
+const TokenForm = ({ token, isLoad, refCode, sendOTP, setToken, countdown, submitSignup, setCurrentPage, isAvailableSend }:IFTokenForm) => {
+    return (
+        <div className="flex flex-col items-center gap-5">
+            <p className="font-bold text-sm">OTP Verification</p>
+            <p className="text-[0.7rem] text-gray-400">ref: {refCode}</p>
+            <InputOTP
+                type="string"
+                maxLength={6}
+                value={String(token)}
+                onChange={(value) => setToken(isNaN(Number(value)) ? 0 : Number(value))}
+            >
+                <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                </InputOTPGroup>
+            </InputOTP>
+            <Button variant="link" onClick={sendOTP} className="underline hover:text-orange-400" disabled={!isAvailableSend}>
+                {!isAvailableSend && `Please, wait ${countdown} second to re-send.`}
+                {isAvailableSend && "Re-send OTP To Email"}
+            </Button>
+            <div className="flex justify-end items-center gap-2 mt-5 w-full">
+                <Button variant="outline" onClick={() => setCurrentPage(1)}>Go Back</Button>
+                <Button onClick={submitSignup}>
+                    {isLoad && (<Loader2Icon className="animate-spin" />)}
+                    Submit
+                </Button>
+            </div>
+        </div>
+    );
+}
 
+const SignupDialog = () => {
+    // navigate
+    const navigate = useNavigate();
+    // state
+    const [token, setToken] = useState<number>(0);
+    const [countdown, setCountdown] = useState(60);
+    const [refCode, setRefCode] = useState<string>("");
+    const [isLoad, setIsLoad] = useState<boolean>(false);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const [currentPage, setCurrentPage] = useState<1 | 2>(1);
+    const [isAvailableSend, setIsAvailableSend] = useState(true);
+    const [formData, setFormData] = useState<z.infer<typeof signinBlueprint> | null>(null);
+    // zod validate
     const form = useForm<z.infer<typeof signinBlueprint>>({ // change validate to type
         resolver: zodResolver(signinBlueprint), // sync zod and react-hook-form
         defaultValues: { // initial variable
@@ -151,33 +231,138 @@ const SignupDialog = () => {
             password: ""
         }
     });
-
-    const onInvalid = (_errors: FieldErrors<signinType>) => setTimeout(() => form.reset(), 5000);
-
-    const submitSignup = (values: z.infer<typeof signinBlueprint>) => { // success case when validate
+    // effect
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
+    // function
+    const prepareSignup = (values: z.infer<typeof signinBlueprint>) => {
+        setFormData(values);
+        setCurrentPage(2);
+    }
+    const sendOTP = async() => { // success case when validate
+        if (!isAvailableSend) {
+            toast.info("Please, wait 1 minute to re-send OTP.", toastOptions);
+            return;
+        }
+        // prepare
+        startCountdown();
         setIsLoad(true);
         try {
-            console.log(values);
+            const response = await toast.promise(
+                axios.post(`${import.meta.env.VITE_API}/verify/email`, {
+                    email: formData?.email
+                }),
+                {
+                    pending: "Promise is pending...",
+                    success: "Promise resolved",
+                    error: "Promise rejected",
+                }
+            );
+            if (response?.data?.message) {
+                const res = response.data;
+                setRefCode(res.ref);
+                toast.success(response.data.message, toastOptions);
+            }
         } catch (error) {
-            console.error(error);
+            if (axios.isAxiosError(error)) {
+                if (error?.response?.data?.message) toast.error(error.response.data.message, toastOptions);
+                else toast.error("Something went wrong.", toastOptions);
+            } else toast.error("Something went wrong.", toastOptions);
+        } finally {
+            setIsLoad(false);
+            setCurrentPage(2);
         }
     }
-
+    const submitSignup = async() => {
+        setIsLoad(true);
+        try {
+            // check otp
+            if (token === 0 || refCode === "") {
+                toast.info("Please, verify your email before submit", toastOptions);
+                return;
+            }
+            // prepare
+            const { confirm_password, ...modifyForm } = formData!;
+            const response = await toast.promise(
+                axios.post(`${import.meta.env.VITE_API}/signup`, {
+                    ...modifyForm, token, reference_code: refCode
+                }, {
+                    withCredentials: true
+                }),
+                {
+                    pending: "Promise is pending...",
+                    success: "Promise resolved",
+                    error: "Promise rejected",
+                }
+            );
+            if (response?.data?.message) {
+                toast.success(response.data.message, toastOptions);
+                navigate("/dashboard");
+            }
+            else toast.error("Something went wrong.", toastOptions);
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                if (error?.response?.data?.message) toast.error(error.response.data.message, toastOptions);
+                else toast.error("Something went wrong.", toastOptions);
+            } else toast.error("Something went wrong.", toastOptions);
+        } finally {
+            setIsLoad(false);
+        }
+    }
+    const startCountdown = () => {
+        setIsAvailableSend(false);
+        setCountdown(60);
+        timerRef.current = setInterval(() => {
+            setCountdown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current!);
+                    setIsAvailableSend(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }
+    // render
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" className={cn('py-3 px-8')}>Sign up</Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Sign up</DialogTitle>
-                    <DialogDescription>
-                        To try out the user management system, including access control and role-based permissions for managing your own data within the system.
-                    </DialogDescription>
-                </DialogHeader>
-                <SignupForm isLoad={isLoad} form={form} onInvalid={onInvalid} submitSignup={submitSignup} />
-            </DialogContent>
-        </Dialog>
+        <>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline" className={cn('py-3 px-8')}>Sign up</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Sign up</DialogTitle>
+                        <DialogDescription>
+                            To try out the user management system, including access control and role-based permissions for managing your own data within the system.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {currentPage === 1 && (
+                        <SignupForm
+                            form={form}
+                            isLoad={isLoad}
+                            prepareSignup={prepareSignup}
+                        />
+                    )}
+                    {currentPage === 2 && (
+                        <TokenForm
+                            token={token}
+                            isLoad={isLoad}
+                            refCode={refCode}
+                            sendOTP={sendOTP}
+                            setToken={setToken}
+                            countdown={countdown}
+                            submitSignup={submitSignup}
+                            setCurrentPage={setCurrentPage}
+                            isAvailableSend={isAvailableSend}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 

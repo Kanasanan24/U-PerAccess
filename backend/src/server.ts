@@ -14,7 +14,10 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT ?? 8000;
 // middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONT_DOMAIN,
+    credentials: true
+}));
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
